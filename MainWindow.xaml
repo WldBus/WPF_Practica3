@@ -1,0 +1,118 @@
+﻿<Window x:Class="EngineeringCalculator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Калькулятор" Height="700" Width="350" ResizeMode="NoResize">
+    <Window.Resources>
+        <Style x:Key="CalcButtonStyle" TargetType="Button">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Height" Value="50"/>
+            <Setter Property="Width" Value="60"/>
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                BorderBrush="Transparent"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="EqualsButtonStyle" TargetType="Button" BasedOn="{StaticResource CalcButtonStyle}">
+            <Setter Property="Background" Value="#57cdff"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Инженерный" FontSize="20" FontWeight="Bold" Margin="0,0,0,5" Grid.Row="0"/>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock x:Name="ExpressionText" FontSize="16" Foreground="Gray" TextAlignment="Right"/>
+            <TextBlock x:Name="ResultText" FontSize="36" FontWeight="Bold" TextAlignment="Right" Text="0"/>
+        </StackPanel>
+        <Grid Grid.Row="3" Margin="2,160,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Первый ряд -->
+            <Button Content="sin" Grid.Row="0" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="FunctionButton_Click"/>
+            <Button Content="π" Grid.Row="0" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="ConstButton_Click"/>
+            <Button Content="e" Grid.Row="0" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="ConstButton_Click"/>
+            <Button Content="CE" Grid.Row="0" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="ClearEntry_Click"/>
+            <Button Content="⌫" Grid.Row="0" Grid.Column="4" Style="{StaticResource CalcButtonStyle}" Click="Backspace_Click"/>
+
+            <!-- Второй ряд -->
+            <Button Content="x²" Grid.Row="1" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="Square_Click"/>
+            <Button Content="1/x" Grid.Row="1" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="Reciprocal_Click"/>
+            <Button Content="|x|" Grid.Row="1" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="Abs_Click"/>
+            <Button Content="cos" Grid.Row="1" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="FunctionButton_Click"/>
+            <Button Content="tg" Grid.Row="1" Grid.Column="4" Style="{StaticResource CalcButtonStyle}" Click="FunctionButton_Click"/>
+
+            <!-- Третий ряд -->
+            <Button Content="√" Grid.Row="2" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="Sqrt_Click"/>
+            <Button Content="(" Grid.Row="2" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content=")" Grid.Row="2" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="n!" Grid.Row="2" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="Factorial_Click"/>
+            <Button Content="÷" Grid.Row="2" Grid.Column="4" Style="{StaticResource CalcButtonStyle}" Click="Operator_Click"/>
+
+            <!-- Четвертый ряд -->
+            <Button Content="xʸ" Grid.Row="3" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="Power_Click"/>
+            <Button Content="7" Grid.Row="3" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="8" Grid.Row="3" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="9" Grid.Row="3" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="×" Grid.Row="3" Grid.Column="4" Style="{StaticResource CalcButtonStyle}" Click="Operator_Click"/>
+
+            <!-- Пятый ряд -->
+            <Button Content="10ˣ" Grid.Row="4" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="TenPower_Click"/>
+            <Button Content="4" Grid.Row="4" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="5" Grid.Row="4" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="6" Grid.Row="4" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="−" Grid.Row="4" Grid.Column="4" Style="{StaticResource CalcButtonStyle}" Click="Operator_Click"/>
+
+            <!-- Шестой ряд -->
+            <Button Content="log" Grid.Row="5" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="Log_Click"/>
+            <Button Content="1" Grid.Row="5" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="2" Grid.Row="5" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="3" Grid.Row="5" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="+" Grid.Row="5" Grid.Column="4" Style="{StaticResource CalcButtonStyle}" Click="Operator_Click"/>
+
+            <!-- Седьмой ряд -->
+            <Button Content="ln" Grid.Row="6" Grid.Column="0" Style="{StaticResource CalcButtonStyle}" Click="Ln_Click"/>
+            <Button Content="±" Grid.Row="6" Grid.Column="1" Style="{StaticResource CalcButtonStyle}" Click="Negate_Click"/>
+            <Button Content="0" Grid.Row="6" Grid.Column="2" Style="{StaticResource CalcButtonStyle}" Click="Input_Click"/>
+            <Button Content="," Grid.Row="6" Grid.Column="3" Style="{StaticResource CalcButtonStyle}" Click="Decimal_Click"/>
+            <Button Content="=" Grid.Row="6" Grid.Column="4" Style="{StaticResource EqualsButtonStyle}" Click="Equals_Click"/>
+        </Grid>
+    </Grid>
+</Window>
