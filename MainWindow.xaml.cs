@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 
 namespace EngineeringCalculator
 {
@@ -144,15 +146,7 @@ namespace EngineeringCalculator
 
             if (!string.IsNullOrEmpty(currentInput))
             {
-                if (func == "sin" || func == "cos" || func == "tg")
-                {
-                    // Преобразуем в радианы
-                    expressionHistory += $"Math.{ToMathFunc(func)}({currentInput} * {Math.PI} / 180)";
-                }
-                else
-                {
-                    expressionHistory += $"{func}({currentInput})";
-                }
+                expressionHistory += $"{func}({currentInput})";
                 currentInput = "";
             }
             else
@@ -164,6 +158,7 @@ namespace EngineeringCalculator
             shouldRepeatOperation = false;
             UpdateDisplay();
         }
+
 
         private string ToMathFunc(string func)
         {
@@ -181,15 +176,17 @@ namespace EngineeringCalculator
             try
             {
                 string eval;
+                string displayExpr;
+
                 if (shouldRepeatOperation && !string.IsNullOrEmpty(lastOperator) && !string.IsNullOrEmpty(lastOperand))
                 {
                     eval = ResultText.Text + lastOperator + lastOperand;
-                    expressionHistory = ResultText.Text + " " + lastOperator + " " + lastOperand + " = ";
+                    displayExpr = ResultText.Text + " " + lastOperator + " " + lastOperand;
                 }
                 else if (!string.IsNullOrEmpty(currentInput) && !string.IsNullOrEmpty(expressionHistory))
                 {
                     eval = expressionHistory + currentInput;
-                    expressionHistory = eval + " = ";
+                    displayExpr = expressionHistory + currentInput;
                     lastOperand = currentInput;
                     shouldRepeatOperation = true;
                 }
@@ -198,17 +195,13 @@ namespace EngineeringCalculator
                     return;
                 }
 
-                eval = eval.Replace("×", "*")
-                          .Replace("÷", "/")
-                          .Replace("−", "-")
-                          .Replace(",", ".")
-                          .Replace("log", "Math.Log10")
-                          .Replace("ln", "Math.Log");
+                // Преобразуем для вычисления, но сохраняем оригинальный вид для отображения
+                string computeExpr = ConvertToComputeExpression(eval);
+                displayExpr = CleanDisplayExpression(displayExpr);
 
-                eval = ReplacePowerOperators(eval);
-
-                double result = EvaluateExpression(eval);
+                double result = EvaluateExpression(computeExpr);
                 currentInput = result.ToString(CultureInfo.InvariantCulture);
+                expressionHistory = displayExpr + " =";
                 newInput = true;
                 calculated = true;
                 UpdateDisplay();
@@ -217,6 +210,17 @@ namespace EngineeringCalculator
             {
                 ResultText.Text = "Ошибка";
             }
+        }
+
+        private string CleanDisplayExpression(string expr)
+        {
+            // Убираем лишние скобки и преобразования для отображения
+            string displayExpr = expr.Replace("×", "*")
+                                   .Replace("÷", "/")
+                                   .Replace("−", "-");
+
+            // Можно добавить дополнительные преобразования для красоты
+            return displayExpr;
         }
 
         private double EvaluateWithCSharpScript(string expr)
@@ -235,36 +239,56 @@ namespace EngineeringCalculator
         {
             try
             {
-                expr = expr.Replace(",", ".");
+                var options = ScriptOptions.Default
+                    .AddReferences(typeof(Math).Assembly)
+                    .AddImports("System");
 
-                // Заменяем функции на Math.*
-                expr = expr.Replace("sin", "Math.Sin")
-                           .Replace("cos", "Math.Cos")
-                           .Replace("tg", "Math.Tan")
-                           .Replace("log", "Math.Log10")
-                           .Replace("ln", "Math.Log")
-                           .Replace("π", Math.PI.ToString(CultureInfo.InvariantCulture))
-                           .Replace("e", Math.E.ToString(CultureInfo.InvariantCulture))
-                           .Replace("√", "Math.Sqrt");
-
-                expr = ReplacePowerOperators(expr);
-
-                // Простой способ: если нет Math. — используем DataTable
-                if (!expr.Contains("Math."))
-                {
-                    var dt = new DataTable();
-                    dt.Locale = CultureInfo.InvariantCulture;
-                    var result = dt.Compute(expr, "");
-                    return Convert.ToDouble(result);
-                }
-
-                // Пытаемся скомпилировать через CSharpScript
-                return EvaluateWithCSharpScript(expr);
+                return CSharpScript.EvaluateAsync<double>(expr, options).Result;
             }
             catch
             {
-                throw new Exception("Ошибка вычисления выражения");
+                // Если не удалось вычислить через Roslyn, пробуем через DataTable
+                try
+                {
+                    var dt = new DataTable();
+                    dt.Locale = CultureInfo.InvariantCulture;
+                    return Convert.ToDouble(dt.Compute(expr, null));
+                }
+                catch
+                {
+                    throw new Exception("Ошибка вычисления выражения");
+                }
             }
+        }
+
+        private string ConvertToComputeExpression(string expr)
+        {
+            string computeExpr = expr.Replace("×", "*")
+                                     .Replace("÷", "/")
+                                     .Replace("−", "-")
+                                     .Replace(",", ".")
+                                     .Replace("π", Math.PI.ToString(CultureInfo.InvariantCulture))
+                                     .Replace("e", Math.E.ToString(CultureInfo.InvariantCulture));
+
+            // ✅ Преобразуем логарифмы
+            computeExpr = Regex.Replace(computeExpr, @"log\(([^()]+)\)", "Math.Log10($1)", RegexOptions.IgnoreCase);
+            computeExpr = Regex.Replace(computeExpr, @"ln\(([^()]+)\)", "Math.Log($1)", RegexOptions.IgnoreCase);
+
+            // ✅ Преобразуем тригонометрические функции в градусах
+            computeExpr = Regex.Replace(computeExpr, @"sin\(([^()]+)\)",
+                m => $"Math.Sin(({m.Groups[1].Value}) * Math.PI / 180)", RegexOptions.IgnoreCase);
+
+            computeExpr = Regex.Replace(computeExpr, @"cos\(([^()]+)\)",
+                m => $"Math.Cos(({m.Groups[1].Value}) * Math.PI / 180)", RegexOptions.IgnoreCase);
+
+            computeExpr = Regex.Replace(computeExpr, @"tg\(([^()]+)\)",
+                m => $"Math.Tan(({m.Groups[1].Value}) * Math.PI / 180)", RegexOptions.IgnoreCase);
+
+            // ✅ Обработка степеней: 10^x → Math.Pow(10, x), a^b → Math.Pow(a, b)
+            computeExpr = Regex.Replace(computeExpr, @"(\d+(\.\d+)?|\([^()]+\))\s*\^\s*(\d+(\.\d+)?|\([^()]+\))",
+                "Math.Pow($1,$3)");
+
+            return computeExpr;
         }
 
 
@@ -274,9 +298,16 @@ namespace EngineeringCalculator
 
             try
             {
-                double num = double.Parse(currentInput, CultureInfo.InvariantCulture);
-                currentInput = (num * num).ToString(CultureInfo.InvariantCulture);
-                expressionHistory = $"sqr({num}) = ";
+                string number = currentInput;
+                double num = double.Parse(number, CultureInfo.InvariantCulture);
+                double result = num * num;
+
+                // Для отображения: 6^2
+                expressionHistory = $"{number}^2";
+
+                // Для вычисления — сохраним квадрат как текущее значение
+                currentInput = result.ToString(CultureInfo.InvariantCulture);
+
                 newInput = true;
                 calculated = true;
                 shouldRepeatOperation = false;
@@ -400,17 +431,21 @@ namespace EngineeringCalculator
         {
             if (!string.IsNullOrEmpty(currentInput))
             {
-                expressionHistory += $"Math.Pow(10, {currentInput})";
-                currentInput = "";
+                expressionHistory += $"10^{currentInput}";
+                double exponent = double.Parse(currentInput, CultureInfo.InvariantCulture);
+                currentInput = Math.Pow(10, exponent).ToString(CultureInfo.InvariantCulture);
             }
             else
             {
-                expressionHistory += "Math.Pow(10,";
+                expressionHistory += "10^";
             }
+
             newInput = true;
+            calculated = true;
             shouldRepeatOperation = false;
             UpdateDisplay();
         }
+
 
         private void Log_Click(object sender, RoutedEventArgs e)
         {
@@ -445,6 +480,7 @@ namespace EngineeringCalculator
             shouldRepeatOperation = false;
             UpdateDisplay();
         }
+
 
         private void Decimal_Click(object sender, RoutedEventArgs e)
         {
